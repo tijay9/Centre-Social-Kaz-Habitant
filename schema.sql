@@ -1,0 +1,138 @@
+CREATE TABLE IF NOT EXISTS users (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  email        VARCHAR(255) NOT NULL UNIQUE,
+  passwordHash VARCHAR(255) NOT NULL,
+  name         VARCHAR(255) NOT NULL,
+  role         ENUM('ADMIN', 'USER') NOT NULL DEFAULT 'ADMIN',
+  active       TINYINT(1) NOT NULL DEFAULT 1,
+  createdAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (id, email, passwordHash, name, role, active, createdAt, updatedAt)
+VALUES (
+  1,
+  'admin@dorothy.local',
+  '$2a$12$y7a6fGLOFgwDk3D6nHQmF.ONt5QdPRhF6l342XQI3/O0Mhq9H5W3y', -- mot de passe: Admin123!
+  'Admin Dorothy',
+  'ADMIN',
+  1,
+  NOW(),
+  NOW()
+)
+ON DUPLICATE KEY UPDATE
+  email = VALUES(email);
+
+CREATE TABLE IF NOT EXISTS events (
+  id              INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title           VARCHAR(255) NOT NULL,
+  description     TEXT NOT NULL,
+  content         TEXT,
+  date            DATETIME NOT NULL,
+  time            VARCHAR(16),
+  location        VARCHAR(255) NOT NULL,
+  imageUrl        VARCHAR(512),
+  category        ENUM('SENIORS', 'REEAP', 'LAEP', 'JEUNESSE', 'ACCES_DROITS', 'ANIME_QUARTIER', 'GENERAL') NOT NULL,
+  status          ENUM('DRAFT', 'PUBLISHED', 'CANCELLED') NOT NULL DEFAULT 'DRAFT',
+  featured        TINYINT(1) NOT NULL DEFAULT 0,
+  maxParticipants INT,
+  tags            TEXT,
+  createdById     INT UNSIGNED,
+  createdAt       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS registrations (
+  id                  INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  firstName           VARCHAR(100) NOT NULL,
+  lastName            VARCHAR(100) NOT NULL,
+  email               VARCHAR(255) NOT NULL,
+  phone               VARCHAR(50) NOT NULL,
+  message             TEXT,
+  status              ENUM('PENDING', 'EMAIL_CONFIRMED', 'CONFIRMED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
+  eventId             INT UNSIGNED NOT NULL,
+  emailToken          VARCHAR(255),
+  emailTokenExpiry    DATETIME,
+  emailConfirmedAt    DATETIME,
+  adminApprovedAt     DATETIME,
+  adminApprovedBy     INT UNSIGNED,
+  createdAt           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_registrations_event FOREIGN KEY (eventId) REFERENCES events(id),
+  CONSTRAINT fk_registrations_admin FOREIGN KEY (adminApprovedBy) REFERENCES users(id),
+  INDEX idx_email_token (emailToken),
+  INDEX idx_status (status),
+  INDEX idx_event (eventId)
+);
+
+CREATE TABLE IF NOT EXISTS team_members (
+  id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name      VARCHAR(255) NOT NULL,
+  position  VARCHAR(255) NOT NULL,
+  category  ENUM('SENIORS', 'REEAP', 'LAEP', 'JEUNESSE', 'GENERAL') NOT NULL,
+  bio       TEXT,
+  imageUrl  VARCHAR(512),
+  email     VARCHAR(255),
+  phone     VARCHAR(50),
+  active    TINYINT(1) NOT NULL DEFAULT 1,
+  `order`   INT NOT NULL DEFAULT 0,
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS posts (
+  id          INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title       VARCHAR(255) NOT NULL,
+  content     LONGTEXT NOT NULL,
+  excerpt     TEXT,
+  category    ENUM('SENIORS', 'REEAP', 'LAEP', 'JEUNESSE', 'ACCES_DROITS', 'ANIME_QUARTIER', 'GENERAL') NOT NULL,
+  status      ENUM('DRAFT', 'PUBLISHED', 'ARCHIVED') NOT NULL DEFAULT 'DRAFT',
+  imageUrl    VARCHAR(512),
+  featured    TINYINT(1) NOT NULL DEFAULT 0,
+  tags        TEXT,
+  createdAt   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  publishedAt DATETIME,
+  authorId    INT UNSIGNED,
+  CONSTRAINT fk_posts_author FOREIGN KEY (authorId) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS contacts (
+  id        INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name      VARCHAR(255) NOT NULL,
+  email     VARCHAR(255) NOT NULL,
+  phone     VARCHAR(50),
+  subject   VARCHAR(255) NOT NULL,
+  message   TEXT NOT NULL,
+  status    ENUM('NEW', 'READ', 'REPLIED') NOT NULL DEFAULT 'NEW',
+  createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS partners (
+  id         INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name       VARCHAR(255) NOT NULL,
+  description TEXT,
+  logoUrl    VARCHAR(512),
+  websiteUrl VARCHAR(512),
+  category   ENUM('INSTITUTIONAL', 'ASSOCIATIF', 'PRIVE') NOT NULL,
+  active     TINYINT(1) NOT NULL DEFAULT 1,
+  `order`    INT NOT NULL DEFAULT 0,
+  createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS gallery_images (
+  id         INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(255),
+  description TEXT,
+  filename   VARCHAR(255),
+  url        VARCHAR(512) NOT NULL,
+  category   ENUM('SENIORS', 'REEAP', 'LAEP', 'JEUNESSE', 'ANIME_QUARTIER', 'ACCES_DROITS', 'GENERAL'),
+  tags       TEXT,
+  size       INT,
+  width      INT,
+  height     INT,
+  createdAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

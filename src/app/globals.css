@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Correction FORCÉE pour la visibilité du texte dans TOUS les formulaires */
+input,
+textarea,
+select {
+  color: #1f2937 !important; /* Gris très foncé */
+  background-color: #ffffff !important; /* Fond blanc */
+  border: 1px solid #d1d5db !important; /* Bordure grise */
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  color: #111827 !important; /* Noir presque pur au focus */
+  background-color: #ffffff !important;
+  border-color: #fc7f2b !important; /* Couleur Dorothy au focus */
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(252, 127, 43, 0.2) !important;
+}
+
+/* Styles spécifiques pour les placeholders */
+input::placeholder,
+textarea::placeholder {
+  color: #6b7280 !important; /* Gris moyen */
+  opacity: 1 !important;
+}
+
+/* Options des menus déroulants */
+select option {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* Correction spécifique pour l'interface admin */
+.admin-form input,
+.admin-form textarea,
+.admin-form select,
+input[class*="border-gray"],
+textarea[class*="border-gray"],
+select[class*="border-gray"] {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* Force la couleur pour tous les éléments avec classes Tailwind */
+input[class*="text-"],
+textarea[class*="text-"],
+select[class*="text-"] {
+  color: #1f2937 !important;
+}
+
+/* Styles pour les zones de texte spécifiques */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+textarea,
+select {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+  -webkit-text-fill-color: #1f2937 !important; /* Pour Safari */
+}
