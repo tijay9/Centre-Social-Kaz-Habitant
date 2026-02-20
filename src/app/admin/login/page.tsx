@@ -50,6 +50,10 @@ export default function AdminLogin() {
 
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+
+        // Cookie de session pour que le middleware Next.js autorise l'accès aux routes /admin/*
+        document.cookie = `auth-token=${encodeURIComponent(data.token)}; Path=/; SameSite=Lax; Secure`;
+
         router.push('/admin/dashboard');
       } else {
         await apiFetch('/auth/register-admin', {
