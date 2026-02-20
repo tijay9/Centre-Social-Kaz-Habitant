@@ -33,7 +33,15 @@ export default function AdminDashboard() {
     async function loadDashboardData() {
       try {
         const statisticsData = await fetchStatisticsClient();
-        setStats(statisticsData);
+
+        const normalized: Statistics = {
+          events: typeof (statisticsData as any)?.events === 'number' ? (statisticsData as any).events : 0,
+          teamMembers: typeof (statisticsData as any)?.teamMembers === 'number' ? (statisticsData as any).teamMembers : 0,
+          galleryImages: typeof (statisticsData as any)?.galleryImages === 'number' ? (statisticsData as any).galleryImages : 0,
+          partners: typeof (statisticsData as any)?.partners === 'number' ? (statisticsData as any).partners : 0,
+        };
+
+        setStats(normalized);
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
       } finally {
