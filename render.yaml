@@ -12,30 +12,21 @@ services:
         value: production
       - key: PORT
         value: 3001
-
-      # URLs
       - key: FRONTEND_URL
         sync: false
       - key: BACKEND_URL
         sync: false
-
-      # Auth
       - key: JWT_SECRET
         sync: false
       - key: ADMIN_EMAIL
         sync: false
-
-      # Supabase
       - key: SUPABASE_URL
         value: https://esngfitxuxnsgijqmyvw.supabase.co
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-
-      # Brevo
       - key: BREVO_API_KEY
         sync: false
       - key: BREVO_SENDER_EMAIL
         sync: false
-
     healthCheckPath: /health
     autoDeploy: true
