@@ -2,7 +2,9 @@ type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 function getBaseUrl() {
   const url = process.env.NEXT_PUBLIC_API_URL;
-  if (!url) return '';
+  if (!url) {
+    throw new Error('API non configurée: NEXT_PUBLIC_API_URL manquant (doit pointer vers le backend Render)');
+  }
   return url.replace(/\/+$/, '');
 }
 
@@ -10,6 +12,17 @@ function getAuthHeader() {
   if (typeof window === 'undefined') return {};
   const token = localStorage.getItem('authToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+function withTimeout(init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const signal = init.signal ?? controller.signal;
+
+  return {
+    init: { ...init, signal },
+    cleanup: () => clearTimeout(timer),
+  };
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit & { method?: ApiMethod } = {}): Promise<T> {
@@ -20,25 +33,36 @@ export async function apiFetch<T>(path: string, init: RequestInit & { method?: A
   const auth = getAuthHeader() as { Authorization?: string };
   if (auth.Authorization) headers.set('Authorization', auth.Authorization);
 
-  const res = await fetch(url, {
-    ...init,
-    headers,
-  });
+  const { init: initWithTimeout, cleanup } = withTimeout(init, 15000);
 
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try {
-      const data = await res.json();
-      message = data?.error || message;
-    } catch {
-      // ignore
+  try {
+    const res = await fetch(url, {
+      ...initWithTimeout,
+      headers,
+    });
+
+    if (!res.ok) {
+      let message = `HTTP ${res.status}`;
+      try {
+        const data = await res.json();
+        message = data?.error || message;
+      } catch {
+        // ignore
+      }
+      throw new Error(message);
     }
-    throw new Error(message);
-  }
 
-  const contentType = res.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
-    return (await res.json()) as T;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return (await res.json()) as T;
+    }
+    return (await res.text()) as unknown as T;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('API injoignable (timeout). Vérifiez que le backend Render tourne et que NEXT_PUBLIC_API_URL est correct.');
+    }
+    throw err;
+  } finally {
+    cleanup();
   }
-  return (await res.text()) as unknown as T;
 }
