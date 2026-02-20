@@ -51,18 +51,28 @@ export default function RegistrationsPage() {
         setLoading(true);
 
         let url = `/admin/registrations?page=${pagination.page}&limit=${pagination.limit}`;
-
-        if (statusFilter !== 'all') {
-          url += `&status=${statusFilter}`;
-        }
-
-        if (searchTerm) {
-          url += `&search=${encodeURIComponent(searchTerm)}`;
-        }
+        if (statusFilter !== 'all') url += `&status=${statusFilter}`;
+        if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
 
         const data = await apiFetch<any>(url);
-        setRegistrations(data.registrations);
-        setPagination(data.pagination);
+
+        const rows = Array.isArray(data?.registrations) ? data.registrations : [];
+        const mapped: Registration[] = rows.map((r: any) => ({
+          id: String(r.id),
+          firstName: r.firstName ?? r.first_name ?? '',
+          lastName: r.lastName ?? r.last_name ?? '',
+          email: r.email ?? '',
+          phone: r.phone ?? '',
+          message: r.message ?? null,
+          status: (r.status ?? 'PENDING') as Registration['status'],
+          eventTitle: r.eventTitle ?? r.events?.title ?? '',
+          eventDate: r.eventDate ?? r.events?.date ?? r.created_at ?? new Date().toISOString(),
+          eventLocation: r.eventLocation ?? r.events?.location ?? '',
+          createdAt: r.createdAt ?? r.created_at ?? new Date().toISOString(),
+        }));
+
+        setRegistrations(mapped);
+        setPagination(data?.pagination ?? { page: 1, limit: 20, total: mapped.length, totalPages: 1 });
       } catch (error) {
         console.error('Erreur:', error);
       } finally {
@@ -97,6 +107,19 @@ export default function RegistrationsPage() {
       default:
         return 'bg-yellow-100 text-yellow-800';
     }
+  };
+
+  const getInitials = (r: Registration) => {
+    const a = (r.firstName || '').trim();
+    const b = (r.lastName || '').trim();
+    const i1 = a ? a[0] : '?';
+    const i2 = b ? b[0] : '';
+    return `${i1}${i2}`.toUpperCase();
+  };
+
+  const safeDate = (value: string) => {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('fr-FR');
   };
 
   if (loading) {
@@ -225,8 +248,7 @@ export default function RegistrationsPage() {
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 rounded-full bg-[#fc7f2b] flex items-center justify-center">
                         <span className="text-white font-semibold">
-                          {registration.firstName[0]}
-                          {registration.lastName[0]}
+                          {getInitials(registration)}
                         </span>
                       </div>
                       <div className="ml-4">
@@ -256,7 +278,7 @@ export default function RegistrationsPage() {
                     <div className="flex flex-col">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        {new Date(registration.eventDate).toLocaleDateString('fr-FR')}
+                        {safeDate(registration.eventDate)}
                       </span>
                       <span className="text-xs text-gray-500 mt-1">
                         {registration.eventLocation}
