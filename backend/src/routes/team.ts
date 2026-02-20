@@ -4,9 +4,11 @@ import { z } from 'zod';
 import { getSupabaseAdmin } from '../lib/supabase';
 import { requireAuth, requireAdmin } from '../middleware/auth';
 
-const teamSchema = z.object({
+const teamBaseSchema = z.object({
   name: z.string().min(1),
-  position: z.string().min(1),
+  // accepte l'ancien champ role (UI admin) et le map sur position
+  position: z.string().min(1).optional(),
+  role: z.string().min(1).optional(),
   category: z.enum(['SENIORS', 'REEAP', 'LAEP', 'JEUNESSE', 'GENERAL']),
   bio: z.string().optional().nullable(),
   image_url: z.string().optional().nullable(),
@@ -15,6 +17,16 @@ const teamSchema = z.object({
   active: z.boolean().optional().default(true),
   sort_order: z.number().int().optional().default(0),
 });
+
+const teamSchema = teamBaseSchema.transform((v) => ({
+  ...v,
+  position: (v.position ?? v.role ?? '').trim(),
+}));
+
+const teamPatchSchema = teamBaseSchema.partial().transform((v) => ({
+  ...v,
+  position: typeof v.position === 'string' || typeof v.role === 'string' ? (v.position ?? v.role ?? '').trim() : undefined,
+}));
 
 export function teamRouter(): Router {
   const router = createRouter();
@@ -56,7 +68,7 @@ export function teamRouter(): Router {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
 
-    const parsed = teamSchema.partial().safeParse(req.body);
+    const parsed = teamPatchSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid body' });
 
     const supabase = getSupabaseAdmin();

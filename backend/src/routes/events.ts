@@ -65,10 +65,21 @@ export function eventsRouter(): Router {
     const { data, error } = await query;
     if (error) return res.status(500).json({ error: 'Database error' });
 
-    const events = (data as EventRow[]).map((e) => ({
-      ...e,
-      tags: normalizeTags(e.tags),
-    }));
+    const events = (data as EventRow[]).map((e) => {
+      const tags = normalizeTags(e.tags);
+      // Normalize for frontend
+      return {
+        ...e,
+        tags,
+        imageUrl: e.image_url,
+      } as any;
+    });
+
+    // Compat: keep {events} but also allow clients expecting an array
+    // (some frontend code calls apiFetch<any[]>('/events'))
+    if (req.headers.accept?.includes('application/json') && String(req.query.format ?? '') === 'array') {
+      return res.json(events);
+    }
 
     return res.json({ events });
   });

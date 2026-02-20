@@ -19,6 +19,7 @@ const bodySchema = z.object({
 
 function getExt(mime: string, originalName: string) {
   if (mime === 'image/jpeg') return 'jpg';
+  if (mime === 'image/jpg') return 'jpg';
   if (mime === 'image/png') return 'png';
   if (mime === 'image/webp') return 'webp';
   if (mime === 'image/gif') return 'gif';
@@ -26,42 +27,75 @@ function getExt(mime: string, originalName: string) {
   return match?.[1] ?? 'bin';
 }
 
+function safeStringify(v: unknown) {
+  try {
+    return JSON.stringify(v);
+  } catch {
+    try {
+      return String(v);
+    } catch {
+      return '[unstringifiable]';
+    }
+  }
+}
+
 export function uploadsRouter(): Router {
   const router = createRouter();
 
   router.post('/admin/uploads', requireAuth, requireAdmin, upload.single('file'), async (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'Missing file' });
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ error: 'Missing file' });
 
-    const parsed = bodySchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid body' });
+      const parsed = bodySchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: 'Invalid body' });
 
-    const folder = parsed.data.folder;
+      const folder = parsed.data.folder;
 
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!validTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({ error: 'Invalid file type' });
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+      if (!validTypes.includes(file.mimetype)) {
+        return res.status(400).json({ error: 'Invalid file type', mime: file.mimetype });
+      }
+
+      const supabase = getSupabaseAdmin();
+
+      const ext = getExt(file.mimetype, file.originalname);
+      const fileName = `${folder}/${Date.now()}_${crypto.randomBytes(6).toString('hex')}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
+
+      if (uploadErr) {
+        console.error('[uploads] Upload failed', {
+          status: uploadErr.statusCode,
+          message: uploadErr.message,
+          name: (uploadErr as any).name,
+          fileName,
+          mime: file.mimetype,
+          size: file.size,
+        });
+
+        return res.status(500).json({
+          error: 'Upload failed',
+          details: {
+            status: uploadErr.statusCode,
+            message: uploadErr.message,
+          },
+        });
+      }
+
+      const { data } = supabase.storage.from('uploads').getPublicUrl(fileName);
+      const url = data.publicUrl;
+
+      return res.status(201).json({ url, path: fileName });
+    } catch (e) {
+      console.error('[uploads] Unexpected error', e);
+      return res.status(500).json({ error: 'Upload failed', details: safeStringify(e) });
     }
-
-    const supabase = getSupabaseAdmin();
-
-    const ext = getExt(req.file.mimetype, req.file.originalname);
-    const fileName = `${folder}/${Date.now()}_${crypto.randomBytes(6).toString('hex')}.${ext}`;
-
-    const { error: uploadErr } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, req.file.buffer, {
-        contentType: req.file.mimetype,
-        upsert: false,
-      });
-
-    if (uploadErr) {
-      return res.status(500).json({ error: 'Upload failed' });
-    }
-
-    const { data } = supabase.storage.from('uploads').getPublicUrl(fileName);
-    const url = data.publicUrl;
-
-    return res.status(201).json({ url, path: fileName });
   });
 
   return router;

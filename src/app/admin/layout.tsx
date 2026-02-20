@@ -42,7 +42,12 @@ export default function AdminLayout({
   const checkAuthentication = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      if (!token) {
+      const cookieToken = typeof document !== 'undefined'
+        ? document.cookie.match(/(?:^|; )auth-token=([^;]*)/)?.[1]
+        : undefined;
+      const effectiveToken = token ?? (cookieToken ? decodeURIComponent(cookieToken) : null);
+
+      if (!effectiveToken) {
         if (pathname !== '/admin/login') {
           router.push('/admin/login');
         }
@@ -53,7 +58,7 @@ export default function AdminLayout({
       const data = await apiFetch<{ user: any }>('/auth/me', {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${effectiveToken}`,
         },
       });
 
