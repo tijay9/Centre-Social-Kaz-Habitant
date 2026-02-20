@@ -24,19 +24,32 @@ const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: '2mb' }));
 
-const allowedOrigins = [env.FRONTEND_URL, process.env.FRONTEND_URL_2].filter(Boolean) as string[];
+const allowedOrigins = [env.FRONTEND_URL, process.env.FRONTEND_URL_2, process.env.FRONTEND_URL_3]
+  .filter(Boolean)
+  .map(String);
+
+function isAllowedOrigin(origin: string) {
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow any Vercel preview/prod domain for this project
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === 'centre-social-kaz-habitant.vercel.app' || hostname.endsWith('.vercel.app');
+  } catch {
+    return false;
+  }
+}
 
 app.use(
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // allow server-to-server / health checks (no Origin header)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      return callback(null, false);
     },
-    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
   })
 );
 
