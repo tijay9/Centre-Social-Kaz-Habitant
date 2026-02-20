@@ -32,8 +32,8 @@ export default function EventDetailPage() {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
-    age: "",
-    address: "",
+    phone: "",
+    message: "",
     email: "",
   });
   const [imageOpen, setImageOpen] = useState(false);
@@ -74,8 +74,8 @@ export default function EventDetailPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    if (!formData.firstName || !formData.lastName || !formData.email) {
-      setErrorMessage("Merci de remplir au minimum le prénom, le nom et l'email.");
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
+      setErrorMessage("Merci de remplir au minimum le prénom, le nom, l'email et le téléphone.");
       return;
     }
 
@@ -85,22 +85,22 @@ export default function EventDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
           email: formData.email,
-          phone: formData.age ? `${formData.age} ans` : 'Non renseigné',
-          message: formData.address || undefined,
-          eventId: id,
+          phone: formData.phone,
+          message: formData.message || undefined,
+          event_id: Number(id),
         }),
       });
 
       setSuccessMessage(
-        '✅ Inscription enregistrée ! Un email de confirmation vous a été envoyé. ' +
-          'Veuillez vérifier votre boîte mail (et les spams) et cliquer sur le lien pour confirmer votre inscription.'
+        'Inscription enregistrée. Un email de confirmation vous a été envoyé. ' +
+          'Veuillez vérifier votre boîte mail (et les spams) et cliquer sur le lien pour confirmer.'
       );
-      setFormData({ firstName: '', lastName: '', age: '', address: '', email: '' });
+      setFormData({ firstName: '', lastName: '', phone: '', message: '', email: '' });
     } catch (err) {
-      setErrorMessage("Impossible d'envoyer votre inscription pour le moment.");
+      setErrorMessage((err as Error).message || "Impossible d'envoyer votre inscription pour le moment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -254,25 +254,14 @@ export default function EventDetailPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Âge</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Téléphone *</label>
                   <input
-                    type="number"
-                    name="age"
-                    value={formData.age}
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#fc7f2b]"
-                    min={0}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Adresse</label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#fc7f2b]"
+                    required
                   />
                 </div>
 
@@ -285,6 +274,18 @@ export default function EventDetailPage() {
                     onChange={handleChange}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#fc7f2b]"
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Message (optionnel)</label>
+                  <input
+                    type="text"
+                    name="message"
+                    value={formData.message}
+                    onChange={handleChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#fc7f2b]"
+                    placeholder="Informations complémentaires"
                   />
                 </div>
 

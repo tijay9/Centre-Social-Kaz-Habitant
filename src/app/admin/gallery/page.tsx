@@ -68,14 +68,6 @@ export default function AdminGallery() {
     }
   }
 
-  const getAuthToken = () => {
-    try {
-      return localStorage.getItem('authToken');
-    } catch {
-      return null;
-    }
-  };
-
   const getImagesByCategory = (categoryId: string) => {
     return images.filter(img => img.category === categoryId).slice(0, MAX_IMAGES_PER_CATEGORY);
   };
@@ -161,21 +153,20 @@ export default function AdminGallery() {
     setUploadError('');
 
     try {
-      const token = getAuthToken();
-      if (!token) throw new Error('Session expirée. Veuillez vous reconnecter.');
-
       // 1) Upload vers Supabase Storage via le backend
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('folder', 'gallery');
 
-      const uploadData = await apiFetch<{ url: string; error?: string }>('/admin/uploads', {
+      const uploadData = await apiFetch<any>('/admin/uploads', {
         method: 'POST',
         body: formData,
       });
 
-      const imageUrl = uploadData.url as string;
-      if (!imageUrl) throw new Error('URL upload manquante');
+      const imageUrl = uploadData?.url as string | undefined;
+      if (!imageUrl) {
+        throw new Error(uploadData?.details?.message || uploadData?.error || 'URL upload manquante');
+      }
 
       // 2) Enregistrer en DB
       await apiFetch('/admin/gallery', {
