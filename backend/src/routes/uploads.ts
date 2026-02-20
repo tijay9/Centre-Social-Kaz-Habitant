@@ -14,7 +14,7 @@ const upload = multer({
 });
 
 const bodySchema = z.object({
-  folder: z.enum(['gallery', 'events']).default('gallery'),
+  folder: z.enum(['gallery', 'events', 'team']).default('gallery'),
 });
 
 function getExt(mime: string, originalName: string) {
@@ -48,7 +48,9 @@ export function uploadsRouter(): Router {
       if (!file) return res.status(400).json({ error: 'Missing file' });
 
       const parsed = bodySchema.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: 'Invalid body' });
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Invalid body', details: parsed.error.flatten() });
+      }
 
       const folder = parsed.data.folder;
 
@@ -71,12 +73,14 @@ export function uploadsRouter(): Router {
 
       if (uploadErr) {
         console.error('[uploads] Upload failed', {
-          status: uploadErr.statusCode,
-          message: uploadErr.message,
-          name: (uploadErr as any).name,
+          folder,
           fileName,
           mime: file.mimetype,
           size: file.size,
+          status: uploadErr.statusCode,
+          message: uploadErr.message,
+          name: (uploadErr as any).name,
+          cause: (uploadErr as any).cause,
         });
 
         return res.status(500).json({
@@ -84,6 +88,7 @@ export function uploadsRouter(): Router {
           details: {
             status: uploadErr.statusCode,
             message: uploadErr.message,
+            name: (uploadErr as any).name,
           },
         });
       }
@@ -93,7 +98,11 @@ export function uploadsRouter(): Router {
 
       return res.status(201).json({ url, path: fileName });
     } catch (e) {
-      console.error('[uploads] Unexpected error', e);
+      console.error('[uploads] Unexpected error', {
+        error: e,
+        message: (e as any)?.message,
+        stack: (e as any)?.stack,
+      });
       return res.status(500).json({ error: 'Upload failed', details: safeStringify(e) });
     }
   });
