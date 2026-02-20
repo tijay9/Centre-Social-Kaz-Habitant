@@ -13,6 +13,7 @@ import {
   Image,
   Briefcase
 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface TeamMemberForm {
   name: string;
@@ -60,19 +61,8 @@ export default function EditTeamMember() {
           return;
         }
 
-        const response = await fetch(`/api/team?id=${memberId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const member = await apiFetch<any>(`/admin/team/${encodeURIComponent(memberId)}`);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erreur lors du chargement');
-        }
-
-        const member = await response.json();
-        
         setFormData({
           name: member.name || '',
           role: member.role || '',
@@ -137,8 +127,9 @@ export default function EditTeamMember() {
 
       const body = new FormData();
       body.append('file', file);
+      body.append('folder', 'events');
 
-      const res = await fetch('/api/team/upload', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '')}/admin/uploads`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -146,17 +137,15 @@ export default function EditTeamMember() {
         body,
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur lors de l'upload de l'image");
+        throw new Error((data as any).error || "Erreur lors de l'upload de l'image");
       }
-
-      const data = await res.json();
 
       setFormData(prev => ({
         ...prev,
         image: file,
-        imageUrl: data.imageUrl as string,
+        imageUrl: (data as any).url as string,
       }));
     } catch (err) {
       console.error('Upload image équipe échoué:', err);
@@ -192,22 +181,13 @@ export default function EditTeamMember() {
         location: formData.location,
       };
 
-      const response = await fetch('/api/team', {
+      await apiFetch(`/admin/team/${encodeURIComponent(memberId)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(memberData),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la modification');
-      }
-
-      const result = await response.json();
-      console.log("Membre d'équipe modifié:", result);
 
       router.push('/admin/team');
     } catch (error) {

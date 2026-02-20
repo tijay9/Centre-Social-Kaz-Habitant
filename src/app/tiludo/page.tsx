@@ -7,6 +7,8 @@ import { Baby, Users, Heart, Smile, Calendar, Phone, Mail, MapPin, Clock, Star, 
 import FallbackImage from '@/components/FallbackImage';
 import { fetchEventsClient } from '@/lib/data';
 import type { Event } from '@/types';
+import { apiFetch } from '@/lib/apiClient';
+import Link from 'next/link';
 
 interface GalleryImage {
   id: string;
@@ -40,11 +42,9 @@ export default function TiLudoPage() {
 
     async function loadGalleryImages() {
       try {
-        const response = await fetch('/api/gallery?category=laep');
-        if (response.ok) {
-          const images = await response.json();
-          setGalleryImages(images.slice(0, 6));
-        }
+        const images = await apiFetch<any[]>('/gallery');
+        const filtered = (Array.isArray(images) ? images : []).filter((img) => (img.category || '').toUpperCase() === 'LAEP');
+        setGalleryImages(filtered.slice(0, 6));
       } catch (error) {
         console.error('Erreur lors du chargement de la galerie:', error);
       } finally {
@@ -503,12 +503,12 @@ export default function TiLudoPage() {
                     <span className="inline-flex items-center text-xs font-medium text-[#fc7f2b] bg-orange-50 px-3 py-1 rounded-full">
                       Ti-Ludo
                     </span>
-                    <a
+                    <Link
                       href="/evenements"
                       className="text-sm text-[#fc7f2b] font-semibold hover:underline flex items-center"
                     >
                       Voir tous
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -710,7 +710,7 @@ function LAEPInterestForm() {
     setSuccess(null);
     setError(null);
     try {
-      const res = await fetch('/api/contacts', {
+      await apiFetch('/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -718,11 +718,10 @@ function LAEPInterestForm() {
           email: form.email,
           phone: form.phone,
           subject: "LAEP - Ti-Ludo: Demande d'information / inscription",
-          message: form.message || 'Je souhaite des informations sur le LAEP (Ti-Ludo).'
-        })
+          message: form.message || 'Je souhaite des informations sur le LAEP (Ti-Ludo).',
+        }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Une erreur est survenue');
+
       setSuccess('Votre demande a bien été envoyée. Nous vous recontacterons rapidement.');
       setForm({ name: '', email: '', phone: '', message: '' });
     } catch (err: unknown) {

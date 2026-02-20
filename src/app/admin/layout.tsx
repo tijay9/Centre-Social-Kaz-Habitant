@@ -17,6 +17,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import NextImage from 'next/image';
+import { apiFetch } from '@/lib/apiClient';
 
 const adminNavItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
@@ -49,23 +50,15 @@ export default function AdminLayout({
         return;
       }
 
-      const response = await fetch('/api/auth/me', {
+      const data = await apiFetch<{ user: any }>('/auth/me', {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setIsAuthenticated(true);
-      } else {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        if (pathname !== '/admin/login') {
-          router.push('/admin/login');
-        }
-      }
+      setUser(data.user);
+      setIsAuthenticated(true);
     } catch (error) {
       console.error('Erreur vérification auth:', error);
       localStorage.removeItem('authToken');

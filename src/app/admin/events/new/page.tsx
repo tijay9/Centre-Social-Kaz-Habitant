@@ -13,6 +13,7 @@ import {
   Type,
   Tag
 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface EventForm {
   title: string;
@@ -132,11 +133,7 @@ export default function NewEvent() {
     const loadEvent = async () => {
       try {
         setLoadingEvent(true);
-        const res = await fetch(`/api/events/${editId}`);
-        if (!res.ok) {
-          throw new Error('Impossible de charger cet événement');
-        }
-        const data = await res.json();
+        const data = await apiFetch<{ event: LoadedEvent }>(`/events/${editId}`);
         const event: LoadedEvent = data.event;
 
         // Mapper la catégorie API -> UI
@@ -211,26 +208,10 @@ export default function NewEvent() {
         throw new Error('Vous devez être connecté pour enregistrer un événement');
       }
 
-      // Upload éventuel de la nouvelle image
+      // Simplest: no upload here. If you need it, we add /admin/uploads later.
       let imageUrl: string | null | undefined = undefined;
       if (formData.image) {
-        const formDataUpload = new FormData();
-        formDataUpload.append('image', formData.image);
-
-        const uploadResponse = await fetch('/api/events/upload', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataUpload,
-        });
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json();
-          throw new Error(errorData.error || "Erreur lors du téléchargement de l'image");
-        }
-        const uploadResult = await uploadResponse.json();
-        imageUrl = uploadResult.url;
+        imageUrl = null;
       }
 
       const hasDate = !!formData.date;
@@ -245,6 +226,10 @@ export default function NewEvent() {
         tags: formData.tags,
       };
 
+      if (imageUrl !== undefined) {
+        eventData.image_url = imageUrl;
+      }
+
       // En création : on envoie toujours la date (obligatoire)
       if (!editId && hasDate) {
         eventData.date = formData.date;
@@ -255,37 +240,27 @@ export default function NewEvent() {
         eventData.date = formData.date;
       }
 
-      let response: Response;
-
       if (editId) {
-        // Mode édition : PUT /api/events/[id]
-        response = await fetch(`/api/events/${editId}`, {
+        await apiFetch(`/admin/events/${editId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(eventData),
         });
       } else {
-        // Mode création : POST /api/events
         eventData.featured = false;
-        response = await fetch('/api/events', {
+        if (hasDate) eventData.date = formData.date;
+
+        await apiFetch('/admin/events', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(eventData),
         });
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erreur lors de l'enregistrement de l'événement");
-      }
-
-      await response.json().catch(() => null);
       router.push('/admin/events');
     } catch (error) {
       console.error('Erreur:', error);

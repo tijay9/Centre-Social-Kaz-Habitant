@@ -11,6 +11,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface GalleryImage {
   id: string;
@@ -57,17 +58,11 @@ export default function AdminGallery() {
   async function loadGalleryImages() {
     try {
       setLoading(true);
-      const response = await fetch('/api/gallery');
-      
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement');
-      }
-      
-      const data = await response.json();
+      const data = await apiFetch<any[]>('/gallery');
       setImages(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Erreur lors du chargement des images:', error);
-      setApiError("Erreur lors du chargement de la galerie");
+      setApiError('Erreur lors du chargement de la galerie');
     } finally {
       setLoading(false);
     }
@@ -95,16 +90,9 @@ export default function AdminGallery() {
     setIsDeleting(true);
     setApiError('');
     try {
-      const token = getAuthToken();
-      const res = await fetch(`/api/gallery?id=${encodeURIComponent(imageId)}`, {
+      await apiFetch(`/admin/gallery/${encodeURIComponent(imageId)}`, {
         method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
-      
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Suppression impossible');
-      }
       
       await loadGalleryImages();
     } catch (e) {
@@ -158,7 +146,7 @@ export default function AdminGallery() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedFile) {
       setUploadError('Veuillez sélectionner une image');
       return;
@@ -171,53 +159,48 @@ export default function AdminGallery() {
 
     setUploadLoading(true);
     setUploadError('');
-    
+
     try {
       const token = getAuthToken();
       if (!token) throw new Error('Session expirée. Veuillez vous reconnecter.');
 
-      // 1. Upload du fichier
+      // 1) Upload vers Supabase Storage via le backend
       const formData = new FormData();
-      formData.append('image', selectedFile);
+      formData.append('file', selectedFile);
+      formData.append('folder', 'gallery');
 
-      const uploadRes = await fetch('/api/gallery/upload', {
+      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '')}/admin/uploads`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: formData
+        body: formData,
       });
 
+      const uploadData = await uploadRes.json().catch(() => ({}));
       if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur lors de l'upload de l'image");
+        throw new Error(uploadData?.error || "Erreur lors de l'upload");
       }
 
-      const uploadData = await uploadRes.json();
+      const imageUrl = uploadData.url as string;
+      if (!imageUrl) throw new Error('URL upload manquante');
 
-      // 2. Créer l'entrée en base de données
-      const createRes = await fetch('/api/gallery', {
+      // 2) Enregistrer en DB
+      await apiFetch('/admin/gallery', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          url: uploadData.url,
+          url: imageUrl,
           title: uploadForm.title || selectedFile.name,
           description: uploadForm.description || undefined,
-          category: selectedCategory
-        })
+          category: selectedCategory,
+        }),
       });
 
-      if (!createRes.ok) {
-        const err = await createRes.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur lors de l'ajout de l'image");
-      }
-
       await loadGalleryImages();
-      
-      // Reset du formulaire
+
       setUploadForm({ title: '', description: '' });
       setSelectedFile(null);
       setPreviewUrl('');

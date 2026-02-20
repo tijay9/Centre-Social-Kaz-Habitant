@@ -4,6 +4,8 @@ import Header from '@/components/Header';
 import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin, Send, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { apiFetch } from '@/lib/apiClient';
+import Image from 'next/image';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -62,7 +64,7 @@ export default function ContactPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/contacts', {
+      await apiFetch('/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -70,14 +72,9 @@ export default function ContactPage() {
           email: formData.email.trim(),
           phone: formData.phone.trim(),
           subject: formData.subject.trim(),
-          message: formData.message.trim()
-        })
+          message: formData.message.trim(),
+        }),
       });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || 'Une erreur est survenue.');
-      }
 
       setSuccess('Votre message a été envoyé avec succès. Nous vous répondrons dans les meilleurs délais.');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
@@ -104,10 +101,13 @@ export default function ContactPage() {
         {/* Bannière titre */}
         <section className="relative h-64 md:h-72 lg:h-80 flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0">
-            <img
+            <Image
               src="/SENIOR.jpeg"
               alt="Bannière Dorothy"
-              className="w-full h-full object-cover"
+              fill
+              priority
+              className="object-cover"
+              sizes="100vw"
             />
             <div className="absolute inset-0 bg-black/30" />
           </div>

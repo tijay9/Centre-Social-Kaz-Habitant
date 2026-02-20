@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { fetchEventsClient } from '@/lib/data';
+import { apiFetch } from '@/lib/apiClient';
 
 interface Event {
   id: string;
@@ -153,53 +154,13 @@ export default function AdminEvents() {
 
   const handleToggleFeatured = async (eventId: string, currentFeatured: boolean) => {
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
+      await apiFetch(`/admin/events/${encodeURIComponent(eventId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featured: !currentFeatured }),
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Impossible de mettre à jour l'événement");
-      }
-
-      const updated = await res.json();
-
-      setEvents(prev => {
-        // Si l’API renvoie directement l’événement mis à jour
-        if (updated && updated.event && updated.event.id) {
-          // Si on vient de passer un événement en "à la une" (featured=true),
-          // on force tous les autres à featured=false pour garantir l’unicité côté UI.
-          if (updated.event.featured) {
-            return prev.map(e =>
-              e.id === updated.event.id
-                ? { ...e, featured: true }
-                : { ...e, featured: false }
-            );
-          }
-          // Sinon, simple mise à jour de cet événement uniquement.
-          return prev.map(e =>
-            e.id === updated.event.id
-              ? { ...e, featured: !!updated.event.featured }
-              : e
-          );
-        }
-
-        // Si l’API ne renvoie pas l’objet event (cas actuel : seulement un message),
-        // on se base sur l’eventId et currentFeatured pour mettre à jour le state.
-        if (!currentFeatured) {
-          // On vient de passer cet événement en "À la une" : on met les autres à false.
-          return prev.map(e =>
-            e.id === eventId ? { ...e, featured: true } : { ...e, featured: false }
-          );
-        }
-
-        // On vient de retirer "À la une" sur cet événement : juste le désactiver.
-        return prev.map(e =>
-          e.id === eventId ? { ...e, featured: false } : e
-        );
-      });
+      await refreshEvents();
     } catch (error) {
       console.error("Erreur lors de la mise à jour de la mise à la une:", error);
       alert("Impossible de mettre à jour la mise à la une.");
@@ -286,16 +247,9 @@ export default function AdminEvents() {
     }
 
     try {
-      // L’API /api/events/[id] utilise requireAuth via les cookies de session,
-      // donc pas besoin d’envoyer un bearer token depuis le client.
-      const response = await fetch(`/api/events/${eventId}`, {
+      await apiFetch(`/admin/events/${encodeURIComponent(eventId)}`, {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Erreur lors de la suppression');
-      }
 
       await refreshEvents();
       setShowDeleteModal(null);
@@ -313,16 +267,11 @@ export default function AdminEvents() {
 
       const newStatus = event.status === 'cancelled' ? 'PUBLISHED' : 'CANCELLED';
 
-      const response = await fetch(`/api/events/${eventId}`, {
+      await apiFetch(`/admin/events/${encodeURIComponent(eventId)}` ,{
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Erreur lors de la mise à jour');
-      }
 
       await refreshEvents();
     } catch (error) {

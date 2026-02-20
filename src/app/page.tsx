@@ -6,6 +6,7 @@ import { ArrowRight, Star, Users, Award, Heart, Phone, Mail, MapPin, Clock, Cale
 import FallbackImage from '@/components/FallbackImage';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface Event {
   id: string;
@@ -27,8 +28,7 @@ export default function Home() {
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
       try {
-        const response = await fetch('/api/events');
-        const data = await response.json();
+        const data = await apiFetch<{ events: Event[] }>('/events');
 
         const events: Event[] = data.events ?? [];
         const now = new Date();

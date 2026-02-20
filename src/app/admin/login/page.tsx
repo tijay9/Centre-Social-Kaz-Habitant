@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LogIn, Eye, EyeOff, AlertCircle, UserPlus } from 'lucide-react';
 import Image from 'next/image';
+import { apiFetch } from '@/lib/apiClient';
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function AdminLogin() {
 
     try {
       if (mode === 'login') {
-        const response = await fetch('/api/auth/login', {
+        const data = await apiFetch<{ token: string; user: any }>('/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -47,17 +48,11 @@ export default function AdminLogin() {
           }),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Erreur de connexion');
-        }
-
-        const data = await response.json();
         localStorage.setItem('authToken', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         router.push('/admin/dashboard');
       } else {
-        const response = await fetch('/api/auth/register-admin', {
+        await apiFetch('/auth/register-admin', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -68,12 +63,6 @@ export default function AdminLogin() {
             name: formData.name || 'Admin',
           }),
         });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Erreur de création');
-        }
 
         setSuccess('Admin créé, vous pouvez maintenant vous connecter.');
         setMode('login');

@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import FallbackImage from "@/components/FallbackImage";
 import { Calendar, MapPin, ArrowLeft } from "lucide-react";
 import Image from 'next/image';
+import { apiFetch } from '@/lib/apiClient';
 
 interface EventDetail {
   id: string;
@@ -40,19 +41,16 @@ export default function EventDetailPage() {
   useEffect(() => {
     async function loadEvent() {
       try {
-        const res = await fetch(`/api/events/${id}`);
-        if (!res.ok) {
-          throw new Error("Impossible de charger cet événement");
-        }
-        const data = await res.json();
-        const e = data.event as any;
+        const data = await apiFetch<{ event: any }>(`/events/${id}`);
+        const e = data.event;
+
         setEvent({
           id: e.id,
           title: e.title,
           description: e.description,
           date: e.date,
           location: e.location,
-          imageUrl: e.imageUrl,
+          imageUrl: e.imageUrl ?? e.image_url ?? null,
         });
       } catch (err) {
         setError((err as Error).message);
@@ -83,31 +81,24 @@ export default function EventDetailPage() {
 
     try {
       setIsSubmitting(true);
-      const res = await fetch(`/api/registrations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      await apiFetch('/registrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          phone: formData.age ? `${formData.age} ans` : "Non renseigné",
+          phone: formData.age ? `${formData.age} ans` : 'Non renseigné',
           message: formData.address || undefined,
           eventId: id,
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMessage(data.error || "Une erreur s'est produite lors de l'inscription.");
-        return;
-      }
-
       setSuccessMessage(
-        "✅ Inscription enregistrée ! Un email de confirmation vous a été envoyé. " +
-        "Veuillez vérifier votre boîte mail (et les spams) et cliquer sur le lien pour confirmer votre inscription."
+        '✅ Inscription enregistrée ! Un email de confirmation vous a été envoyé. ' +
+          'Veuillez vérifier votre boîte mail (et les spams) et cliquer sur le lien pour confirmer votre inscription.'
       );
-      setFormData({ firstName: "", lastName: "", age: "", address: "", email: "" });
+      setFormData({ firstName: '', lastName: '', age: '', address: '', email: '' });
     } catch (err) {
       setErrorMessage("Impossible d'envoyer votre inscription pour le moment.");
     } finally {

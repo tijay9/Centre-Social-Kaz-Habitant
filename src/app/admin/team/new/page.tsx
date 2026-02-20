@@ -13,6 +13,7 @@ import {
   Image,
   Briefcase
 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface TeamMemberForm {
   name: string;
@@ -86,8 +87,9 @@ export default function NewTeamMember() {
 
       const body = new FormData();
       body.append('file', file);
+      body.append('folder', 'events'); // reuse uploads bucket; folder is logical
 
-      const res = await fetch('/api/team/upload', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '')}/admin/uploads`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -95,17 +97,15 @@ export default function NewTeamMember() {
         body,
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur lors de l'upload de l'image");
+        throw new Error((data as any).error || "Erreur lors de l'upload de l'image");
       }
-
-      const data = await res.json();
 
       setFormData(prev => ({
         ...prev,
         image: file,
-        imageUrl: data.imageUrl as string,
+        imageUrl: (data as any).url as string,
       }));
     } catch (err) {
       console.error('Upload image équipe échoué:', err);
@@ -141,22 +141,14 @@ export default function NewTeamMember() {
         order: 0,
       };
 
-      const response = await fetch('/api/team', {
+      await apiFetch('/admin/team', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(memberData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la création');
-      }
-
-      const result = await response.json();
-      console.log("Membre d'équipe créé:", result);
       router.push('/admin/team');
     } catch (error) {
       console.error('Erreur lors de la création:', error);

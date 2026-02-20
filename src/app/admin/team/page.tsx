@@ -18,6 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { fetchTeamMembersClient } from '@/lib/data';
+import { apiFetch } from '@/lib/apiClient';
 
 interface AdminTeamMember {
   id: string;
@@ -48,7 +49,7 @@ export default function AdminTeam() {
   useEffect(() => {
     async function loadTeamMembers() {
       try {
-        const members = await fetchTeamMembersClient();
+        const members = await apiFetch<AdminTeamMember[]>('/admin/team');
         setTeamMembers(members);
       } catch (error) {
         console.error('Erreur lors du chargement des membres:', error);
@@ -62,7 +63,7 @@ export default function AdminTeam() {
 
   const refreshTeamMembers = async () => {
     try {
-      const members = await fetchTeamMembersClient();
+      const members = await apiFetch<AdminTeamMember[]>('/admin/team');
       setTeamMembers(members);
     } catch (error) {
       console.error('Erreur lors du rafraîchissement des membres:', error);
@@ -120,23 +121,9 @@ export default function AdminTeam() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        alert('Vous devez être connecté pour supprimer un membre');
-        return;
-      }
-
-      const response = await fetch(`/api/team?id=${memberId}`, {
+      await apiFetch(`/admin/team/${encodeURIComponent(memberId)}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la suppression');
-      }
 
       // Rafraîchir les données depuis la base de données
       await refreshTeamMembers();
@@ -150,33 +137,16 @@ export default function AdminTeam() {
 
   const toggleMemberStatus = async (memberId: string) => {
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        alert('Vous devez être connecté pour modifier le statut');
-        return;
-      }
-
       const member = teamMembers.find(m => m.id === memberId);
       if (!member) return;
 
       const newStatus = !member.isActive;
 
-      const response = await fetch('/api/team', {
+      await apiFetch(`/admin/team/${encodeURIComponent(memberId)}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: memberId,
-          isActive: newStatus
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: newStatus }),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erreur lors de la mise à jour');
-      }
 
       // Rafraîchir les données depuis la base de données
       await refreshTeamMembers();

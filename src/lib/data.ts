@@ -1,4 +1,5 @@
 // Import seulement les types, pas les fonctions de database
+import { apiFetch } from './apiClient';
 
 // Données statiques pour les catégories (comme avant)
 export const categoryData = [
@@ -75,9 +76,7 @@ export const categoryData = [
 // Fonctions simples pour récupérer les données depuis les API
 export async function fetchEventsClient() {
   try {
-    const response = await fetch('/api/events');
-    if (!response.ok) return [];
-    const data = await response.json();
+    const data = await apiFetch<{ events: any[] }>('/events');
     return data.events || [];
   } catch (error) {
     console.error('Erreur:', error);
@@ -87,9 +86,7 @@ export async function fetchEventsClient() {
 
 export async function fetchTeamMembersClient() {
   try {
-    const response = await fetch('/api/team');
-    if (!response.ok) return [];
-    const data = await response.json();
+    const data = await apiFetch<{ teamMembers: any[] }>('/team');
     return data.teamMembers || [];
   } catch (error) {
     console.error('Erreur:', error);
@@ -99,9 +96,7 @@ export async function fetchTeamMembersClient() {
 
 export async function fetchGalleryImagesClient() {
   try {
-    const response = await fetch('/api/gallery');
-    if (!response.ok) return [];
-    const data = await response.json();
+    const data = await apiFetch<any[]>('/gallery');
     return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('Erreur:', error);
@@ -111,9 +106,7 @@ export async function fetchGalleryImagesClient() {
 
 export async function fetchStatisticsClient() {
   try {
-    const response = await fetch('/api/statistics');
-    if (!response.ok) return [];
-    return await response.json();
+    return await apiFetch<Record<string, any>>('/statistics');
   } catch (error) {
     console.error('Erreur:', error);
     return [];

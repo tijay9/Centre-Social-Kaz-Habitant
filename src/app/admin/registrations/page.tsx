@@ -10,6 +10,7 @@ import {
   Filter,
   Clock
 } from 'lucide-react';
+import { apiFetch } from '@/lib/apiClient';
 
 interface Registration {
   id: string;
@@ -49,7 +50,7 @@ export default function RegistrationsPage() {
       try {
         setLoading(true);
 
-        let url = `/api/registrations?page=${pagination.page}&limit=${pagination.limit}`;
+        let url = `/admin/registrations?page=${pagination.page}&limit=${pagination.limit}`;
 
         if (statusFilter !== 'all') {
           url += `&status=${statusFilter}`;
@@ -59,13 +60,7 @@ export default function RegistrationsPage() {
           url += `&search=${encodeURIComponent(searchTerm)}`;
         }
 
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error('Erreur lors du chargement des inscriptions');
-        }
-
-        const data = await response.json();
+        const data = await apiFetch<any>(url);
         setRegistrations(data.registrations);
         setPagination(data.pagination);
       } catch (error) {
@@ -76,7 +71,7 @@ export default function RegistrationsPage() {
     };
 
     loadRegistrations();
-  }, [pagination.page, statusFilter, searchTerm]);
+  }, [pagination.page, pagination.limit, statusFilter, searchTerm]);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
