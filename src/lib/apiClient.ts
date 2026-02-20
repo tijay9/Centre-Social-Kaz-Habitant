@@ -8,8 +8,20 @@ function getBaseUrl() {
   return url.replace(/\/+$/, '');
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function getAuthHeader() {
   if (typeof window === 'undefined') return {};
+
+  // Source de vérité: cookie (utilisé par le middleware Next)
+  const cookieToken = getCookie('auth-token');
+  if (cookieToken) return { Authorization: `Bearer ${cookieToken}` };
+
+  // Fallback legacy
   const token = localStorage.getItem('authToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -30,8 +42,12 @@ export async function apiFetch<T>(path: string, init: RequestInit & { method?: A
   const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? '' : '/'}${path}`;
 
   const headers = new Headers(init.headers);
-  const auth = getAuthHeader() as { Authorization?: string };
-  if (auth.Authorization) headers.set('Authorization', auth.Authorization);
+
+  // Ajoute automatiquement l'Authorization si non explicitement fourni
+  if (!headers.has('Authorization') && !headers.has('authorization')) {
+    const auth = getAuthHeader() as { Authorization?: string };
+    if (auth.Authorization) headers.set('Authorization', auth.Authorization);
+  }
 
   const { init: initWithTimeout, cleanup } = withTimeout(init, 15000);
 

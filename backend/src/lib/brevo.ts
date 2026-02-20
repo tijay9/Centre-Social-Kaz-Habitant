@@ -13,6 +13,12 @@ export interface EmailParams {
 export async function sendBrevoEmail(params: EmailParams): Promise<boolean> {
   const env = getEnv();
 
+  const senderEmail = env.BREVO_SENDER_EMAIL;
+  if (!senderEmail) {
+    console.error('[Brevo] Missing BREVO_SENDER_EMAIL (must be a verified sender in Brevo)');
+    return false;
+  }
+
   try {
     const response = await fetch(BREVO_API_URL, {
       method: 'POST',
@@ -24,7 +30,7 @@ export async function sendBrevoEmail(params: EmailParams): Promise<boolean> {
       body: JSON.stringify({
         sender: {
           name: 'Centre Social Dorothy',
-          email: env.BREVO_SENDER_EMAIL ?? 'noreply@example.com',
+          email: senderEmail,
         },
         to: [
           {
@@ -40,14 +46,12 @@ export async function sendBrevoEmail(params: EmailParams): Promise<boolean> {
 
     const text = await response.text();
     if (!response.ok) {
-      // eslint-disable-next-line no-console
       console.error('[Brevo] API error', response.status, text);
       return false;
     }
 
     return true;
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('[Brevo] send error', err);
     return false;
   }

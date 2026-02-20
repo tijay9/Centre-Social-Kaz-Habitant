@@ -80,6 +80,10 @@ export default function AdminLayout({
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
+
+    // Supprime le cookie de session (middleware Next)
+    document.cookie = 'auth-token=; Path=/; Max-Age=0; SameSite=Lax; Secure';
+
     setIsAuthenticated(false);
     setUser(null);
     router.push('/admin/login');

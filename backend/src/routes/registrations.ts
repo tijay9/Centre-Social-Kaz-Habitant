@@ -124,13 +124,17 @@ export function registrationsRouter(): Router {
       confirmationLink
     );
 
-    await sendBrevoEmail({
+    const okUserEmail = await sendBrevoEmail({
       to: email,
       toName: userName,
       subject: emailContent.subject,
       htmlContent: emailContent.htmlContent,
       textContent: emailContent.textContent,
     });
+
+    if (!okUserEmail) {
+      return res.status(500).json({ error: "Erreur lors de l'envoi de l'email de confirmation (Brevo)." });
+    }
 
     return res.status(201).json({
       message: 'Inscription créée. Veuillez confirmer votre email.',
@@ -204,11 +208,16 @@ export function registrationsRouter(): Router {
       registration.id
     );
 
-    await sendAdminEmail({
+    const okAdminEmail = await sendAdminEmail({
       subject: adminEmailContent.subject,
       htmlContent: adminEmailContent.htmlContent,
       textContent: adminEmailContent.textContent,
     });
+
+    if (!okAdminEmail) {
+      // on continue le flow mais on log clairement
+      console.error("[Brevo] Admin notification email failed for registration", registration.id);
+    }
 
     return res.redirect(`${env.FRONTEND_URL}/evenements?success=email_confirme&event=${(event as any).id}`);
   });
@@ -291,13 +300,17 @@ export function registrationsRouter(): Router {
           (event as EventRow).description
         );
 
-        await sendBrevoEmail({
+        const okFinal = await sendBrevoEmail({
           to: registration.email,
           toName: userName,
           subject: content.subject,
           htmlContent: content.htmlContent,
           textContent: content.textContent,
         });
+
+        if (!okFinal) {
+          console.error('[Brevo] Final confirmation email failed for registration', registration.id);
+        }
       }
     }
 

@@ -169,18 +169,10 @@ export default function AdminGallery() {
       formData.append('file', selectedFile);
       formData.append('folder', 'gallery');
 
-      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '')}/admin/uploads`, {
+      const uploadData = await apiFetch<{ url: string; error?: string }>('/admin/uploads', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
-
-      const uploadData = await uploadRes.json().catch(() => ({}));
-      if (!uploadRes.ok) {
-        throw new Error(uploadData?.error || "Erreur lors de l'upload");
-      }
 
       const imageUrl = uploadData.url as string;
       if (!imageUrl) throw new Error('URL upload manquante');
