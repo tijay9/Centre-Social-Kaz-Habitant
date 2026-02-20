@@ -62,14 +62,14 @@ export default function NewTeamMember() {
     }
 
     // Optional front-side validation for JPG/PNG
-    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
-      setError('Format non supporté. Utilisez une image JPG ou PNG.');
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'].includes(file.type)) {
+      setError('Format non supporté. Utilisez une image JPG, PNG, WEBP ou GIF.');
       e.target.value = '';
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Image trop volumineuse (max 2MB).');
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image trop volumineuse (max 5MB).');
       e.target.value = '';
       return;
     }
@@ -78,34 +78,19 @@ export default function NewTeamMember() {
     setUploading(true);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        setError('Vous devez être connecté pour téléverser une image.');
-        setUploading(false);
-        return;
-      }
-
       const body = new FormData();
       body.append('file', file);
-      body.append('folder', 'events'); // reuse uploads bucket; folder is logical
+      body.append('folder', 'gallery'); // réutilise le bucket uploads; dossier logique
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '')}/admin/uploads`, {
+      const data = await apiFetch<{ url: string; path: string }>('/admin/uploads', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body,
       });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error((data as any).error || "Erreur lors de l'upload de l'image");
-      }
 
       setFormData(prev => ({
         ...prev,
         image: file,
-        imageUrl: (data as any).url as string,
+        imageUrl: data.url,
       }));
     } catch (err) {
       console.error('Upload image équipe échoué:', err);
@@ -122,13 +107,6 @@ export default function NewTeamMember() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        alert('Vous devez être connecté pour créer un membre');
-        setSaving(false);
-        return;
-      }
-
       const memberData = {
         name: formData.name,
         role: formData.role,
@@ -136,7 +114,7 @@ export default function NewTeamMember() {
         email: formData.email,
         phone: formData.phone,
         bio: formData.bio,
-        imageUrl: formData.imageUrl, // URL renvoyée par l'API upload
+        imageUrl: formData.imageUrl,
         isActive: formData.isActive,
         order: 0,
       };
