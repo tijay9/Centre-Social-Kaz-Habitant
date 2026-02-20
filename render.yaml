@@ -4,9 +4,9 @@ services:
     runtime: node
     plan: free
     region: frankfurt
-    rootDir: backend
-    buildCommand: npm ci && npm run build
-    startCommand: node dist/index.js
+    rootDir: .
+    buildCommand: npm ci && npm run backend:build
+    startCommand: npm run backend:start
     envVars:
       - key: NODE_ENV
         value: production
