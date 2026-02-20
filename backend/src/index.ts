@@ -23,10 +23,20 @@ const app = express();
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '2mb' }));
+
+const allowedOrigins = [env.FRONTEND_URL, process.env.FRONTEND_URL_2].filter(Boolean) as string[];
+
 app.use(
   cors({
-    origin: [env.FRONTEND_URL],
+    origin: (origin, callback) => {
+      // allow server-to-server / health checks (no Origin header)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: false,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
