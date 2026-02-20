@@ -28,7 +28,7 @@ const allowedOrigins = [env.FRONTEND_URL, process.env.FRONTEND_URL_2].filter(Boo
 
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // allow server-to-server / health checks (no Origin header)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
